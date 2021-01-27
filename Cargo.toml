@@ -1,0 +1,23 @@
+[package]
+name = "wayland_sink_with_video_overlay"
+version = "0.1.0"
+authors = ["Joel Winarske <joel.winarske@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+wayland-client = { version = "0.28.3", features = ["use_system_lib"] }
+wayland-commons = "0.28.3"
+wayland-sys = "0.28.3"
+wayland-protocols = { features = ["client"] }
+glib = "0.10.3"
+gstreamer = "0.16.5"
+gstreamer-app = "0.16.5"
+gstreamer-video = "0.16.5"
+anyhow = "1.0"
+derive_more = "0.99.5"
+tempfile = ">=2.0, <4.0"
+
+[build-dependencies]
+wayland-scanner = "0.28.3"
