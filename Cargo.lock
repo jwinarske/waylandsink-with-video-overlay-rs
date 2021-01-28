@@ -790,7 +790,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "derive_more",
- "glib",
  "gstreamer",
  "gstreamer-app",
  "gstreamer-video",

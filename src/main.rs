@@ -4,6 +4,7 @@ extern crate gstreamer_video as gst_video;
 extern crate wayland_sys;
 
 use std::{cmp::min, io::Write, os::unix::io::AsRawFd};
+use std::ffi::c_void;
 use std::process::exit;
 
 use anyhow::Error;
@@ -25,7 +26,7 @@ struct ErrorMessage {
     src: String,
     error: String,
     debug: Option<String>,
-    source: glib::Error,
+    source: gst::glib::Error,
 }
 
 // declare an event enum containing the events we want to receive in the iterator
@@ -37,8 +38,9 @@ event_enum!(
 
 const WIDTH: usize = 320;
 const HEIGHT: usize = 240;
+const GST_WAYLAND_DISPLAY_HANDLE_CONTEXT_TYPE: &str = "GstWaylandDisplayHandleContextType";
 
-fn create_pipeline(surface: Main<WlSurface>, event_queue: &mut EventQueue) -> Result<(gst::Pipeline, &mut EventQueue), Error> {
+fn create_pipeline(surface: Main<WlSurface>, display: Display, event_queue: &mut EventQueue) -> Result<(gst::Pipeline, &mut EventQueue), Error> {
     gst::init()?;
 
     let pipeline = gst::Pipeline::new(None);
@@ -50,8 +52,28 @@ fn create_pipeline(surface: Main<WlSurface>, event_queue: &mut EventQueue) -> Re
     let sink = gst::ElementFactory::make("waylandsink", None)
         .map_err(|_| MissingElement("waylandsink"))?;
 
+    let mut context = gst::Context::new(GST_WAYLAND_DISPLAY_HANDLE_CONTEXT_TYPE, true);
+    {
+        let context = context.get_mut().unwrap();
+        let s = context.get_mut_structure();
+        #[allow(clippy::cast_ptr_alignment)]
+            let value = unsafe {
+            use gst::glib::translate::*;
+            use std::mem;
+
+            let handle = display.c_ptr();
+            let mut value = mem::MaybeUninit::zeroed();
+            gst::gobject_sys::g_value_init(value.as_mut_ptr(), gst::gobject_sys::G_TYPE_POINTER);
+            gst::gobject_sys::g_value_set_pointer(value.as_mut_ptr(), handle as *mut c_void);
+            gst::glib::SendValue::from_glib_none(&value.assume_init() as *const _)
+        };
+        s.set_value("handle", value);
+    }
+    sink.set_context(&context);
+
     pipeline.add_many(&[&src, &videoconvert, &sink])?;
     gst::Element::link_many(&[&src, &videoconvert, &sink])?;
+
 
     let appsrc = src
         .dynamic_cast::<gst_app::AppSrc>()
@@ -85,8 +107,8 @@ fn create_pipeline(surface: Main<WlSurface>, event_queue: &mut EventQueue) -> Re
         // this handler will be called (on average) twice per second.
         gst_app::AppSrcCallbacks::builder()
             .need_data(move |appsrc, _| {
-                // We only produce 100 frames
-                if i == 100 {
+                // We only produce 50 frames
+                if i == 50 {
                     let _ = appsrc.end_of_stream();
                     return;
                 }
@@ -170,6 +192,7 @@ fn create_pipeline(surface: Main<WlSurface>, event_queue: &mut EventQueue) -> Re
         let native = surface.as_ref().c_ptr();
         video_overlay.set_window_handle(native as usize);
     }
+    video_overlay.set_render_rectangle(0, 0, WIDTH as i32, HEIGHT as i32).unwrap();
 
     Ok((pipeline, event_queue))
 }
@@ -181,33 +204,30 @@ fn main_loop((pipeline, event_queue): (gst::Pipeline, &mut EventQueue)) -> Resul
         .get_bus()
         .expect("Pipeline without bus. Shouldn't happen!");
 
-    for msg in bus.iter_timed(gst::CLOCK_TIME_NONE) {
+    gst::glib::MainContext::default().acquire();
+
+    bus.add_watch_local(move |bus, msg| {
         use gst::MessageView;
 
         match msg.view() {
-            MessageView::Eos(..) => break,
-            MessageView::Error(err) => {
-                pipeline.set_state(gst::State::Null)?;
-                return Err(ErrorMessage {
-                    src: msg
-                        .get_src()
-                        .map(|s| String::from(s.get_path_string()))
-                        .unwrap_or_else(|| String::from("None")),
-                    error: err.get_error().to_string(),
-                    debug: err.get_debug(),
-                    source: err.get_error(),
-                }
-                    .into());
+            MessageView::Eos(eos) => {
+                println!("Eos: {:#?}\n{:#?}", bus, eos);
             }
-            _ => (),
+            MessageView::Error(err) => {
+                eprintln!("Error: {:#?}\n{:#?}", bus, err);
+                pipeline.set_state(gst::State::Null).unwrap();
+            }
+            _ => {
+                println!("Unhandled: {:#?}\n{:#?}", bus, msg);
+            }
         }
+        gst::glib::Continue(true)
+    })
+        .expect("Failed to add bus watch");
 
+    loop {
         event_queue.dispatch(&mut (), |_, _, _| { /* we ignore unfiltered messages */ }).unwrap();
     }
-
-    pipeline.set_state(gst::State::Null)?;
-
-    Ok(())
 }
 
 fn main() {
@@ -364,7 +384,7 @@ fn main() {
     surface.attach(Some(&buffer), 0, 0);
     surface.commit();
 
-    match create_pipeline(surface, &mut event_queue).and_then(main_loop) {
+    match create_pipeline(surface, display, &mut event_queue).and_then(main_loop) {
         Ok(r) => r,
         Err(e) => eprintln!("Error! {}", e),
     }

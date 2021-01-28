@@ -45,8 +45,23 @@
     <property name="org.rust.cargo.project.model.PROJECT_DISCOVERY" value="true" />
   </component>
   <component name="RunManager">
+    <configuration name="Run wayland_sink_with_video_overlay" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
+      <option name="command" value="run wayland_sink_with_video_overlay" />
+      <option name="workingDirectory" value="file://$PROJECT_DIR$" />
+      <option name="channel" value="DEFAULT" />
+      <option name="allFeatures" value="false" />
+      <option name="emulateTerminal" value="false" />
+      <option name="backtrace" value="SHORT" />
+      <envs />
+      <option name="isRedirectInput" value="false" />
+      <option name="redirectInputPath" value="" />
+      <method v="2">
+        <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
+      </method>
+    </configuration>
     <configuration default="true" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
       <option name="command" value="run wayland_sink_with_video_overlay" />
+      <option name="workingDirectory" value="file://$PROJECT_DIR$" />
       <option name="channel" value="DEFAULT" />
       <option name="allFeatures" value="false" />
       <option name="emulateTerminal" value="false" />
@@ -75,7 +90,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1611783157143</updated>
-      <workItem from="1611783158198" duration="212000" />
+      <workItem from="1611783158198" duration="15753000" />
     </task>
     <servers />
   </component>
@@ -83,9 +98,49 @@
     <option name="version" value="3" />
   </component>
   <component name="WindowStateProjectService">
-    <state x="524" y="305" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1611783287323">
+    <state x="595" y="314" width="1086" height="740" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1611783661712">
       <screen x="0" y="27" width="1920" height="1173" />
     </state>
-    <state x="524" y="305" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.27.1920.1173@0.27.1920.1173" timestamp="1611783287323" />
+    <state x="595" y="314" width="1086" height="740" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.27.1920.1173@0.27.1920.1173" timestamp="1611783661712" />
+    <state x="920" y="441" width="426" height="493" key="FileChooserDialogImpl" timestamp="1611783652119">
+      <screen x="0" y="27" width="1920" height="1173" />
+    </state>
+    <state x="920" y="441" width="426" height="493" key="FileChooserDialogImpl/0.27.1920.1173@0.27.1920.1173" timestamp="1611783652119" />
+    <state width="1658" height="340" key="GridCell.Tab.0.bottom" timestamp="1611861188061">
+      <screen x="0" y="27" width="1920" height="1173" />
+    </state>
+    <state width="1658" height="340" key="GridCell.Tab.0.bottom/0.27.1920.1173@0.27.1920.1173" timestamp="1611861188061" />
+    <state width="1658" height="340" key="GridCell.Tab.0.center" timestamp="1611861188060">
+      <screen x="0" y="27" width="1920" height="1173" />
+    </state>
+    <state width="1658" height="340" key="GridCell.Tab.0.center/0.27.1920.1173@0.27.1920.1173" timestamp="1611861188060" />
+    <state width="1658" height="340" key="GridCell.Tab.0.left" timestamp="1611861188060">
+      <screen x="0" y="27" width="1920" height="1173" />
+    </state>
+    <state width="1658" height="340" key="GridCell.Tab.0.left/0.27.1920.1173@0.27.1920.1173" timestamp="1611861188060" />
+    <state width="1658" height="340" key="GridCell.Tab.0.right" timestamp="1611861188061">
+      <screen x="0" y="27" width="1920" height="1173" />
+    </state>
+    <state width="1658" height="340" key="GridCell.Tab.0.right/0.27.1920.1173@0.27.1920.1173" timestamp="1611861188061" />
+    <state width="1658" height="340" key="GridCell.Tab.1.bottom" timestamp="1611861188061">
+      <screen x="0" y="27" width="1920" height="1173" />
+    </state>
+    <state width="1658" height="340" key="GridCell.Tab.1.bottom/0.27.1920.1173@0.27.1920.1173" timestamp="1611861188061" />
+    <state width="1658" height="340" key="GridCell.Tab.1.center" timestamp="1611861188061">
+      <screen x="0" y="27" width="1920" height="1173" />
+    </state>
+    <state width="1658" height="340" key="GridCell.Tab.1.center/0.27.1920.1173@0.27.1920.1173" timestamp="1611861188061" />
+    <state width="1658" height="340" key="GridCell.Tab.1.left" timestamp="1611861188061">
+      <screen x="0" y="27" width="1920" height="1173" />
+    </state>
+    <state width="1658" height="340" key="GridCell.Tab.1.left/0.27.1920.1173@0.27.1920.1173" timestamp="1611861188061" />
+    <state width="1658" height="340" key="GridCell.Tab.1.right" timestamp="1611861188061">
+      <screen x="0" y="27" width="1920" height="1173" />
+    </state>
+    <state width="1658" height="340" key="GridCell.Tab.1.right/0.27.1920.1173@0.27.1920.1173" timestamp="1611861188061" />
+    <state x="731" y="299" key="run.anything.popup" timestamp="1611851051640">
+      <screen x="0" y="27" width="1920" height="1173" />
+    </state>
+    <state x="731" y="299" key="run.anything.popup/0.27.1920.1173@0.27.1920.1173" timestamp="1611851051640" />
   </component>
 </project>
