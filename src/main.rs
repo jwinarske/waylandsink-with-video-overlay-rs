@@ -288,7 +288,7 @@ fn main() {
     );
 
     let xdg_wm_base = globals
-        .instantiate_exact::<xdg_wm_base::XdgWmBase>(2)
+        .instantiate_exact::<xdg_wm_base::XdgWmBase>(1)
         .expect("Compositor does not support xdg_shell");
 
     xdg_wm_base.quick_assign(|xdg_wm_base, event, _| {
@@ -380,6 +380,7 @@ fn main() {
     });
 
     event_queue.sync_roundtrip(&mut (), |_, _, _| { /* we ignore unfiltered messages */ }).unwrap();
+    surface.commit();
 
     surface.attach(Some(&buffer), 0, 0);
     surface.commit();

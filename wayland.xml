@@ -298,7 +298,7 @@
 	will be reported by the format event.
       </description>
       <!-- Note to protocol writers: don't update this list manually, instead
-           run the automated script that keeps it in sync with drm_fourcc.h. -->
+	   run the automated script that keeps it in sync with drm_fourcc.h. -->
       <entry name="argb8888" value="0" summary="32-bit ARGB format, [31:0] A:R:G:B 8:8:8:8 little endian"/>
       <entry name="xrgb8888" value="1" summary="32-bit RGB format, [31:0] x:R:G:B 8:8:8:8 little endian"/>
       <entry name="c8" value="0x20203843" summary="8-bit color index format, [7:0] C"/>
@@ -399,6 +399,10 @@
       <entry name="p010" value="0x30313050" summary="2x2 subsampled Cr:Cb plane 10 bits per channel"/>
       <entry name="p012" value="0x32313050" summary="2x2 subsampled Cr:Cb plane 12 bits per channel"/>
       <entry name="p016" value="0x36313050" summary="2x2 subsampled Cr:Cb plane 16 bits per channel"/>
+      <entry name="axbxgxrx106106106106" value="0x30314241" summary="[63:0] A:x:B:x:G:x:R:x 10:6:10:6:10:6:10:6 little endian"/>
+      <entry name="nv15" value="0x3531564e" summary="2x2 subsampled Cr:Cb plane"/>
+      <entry name="q410" value="0x30313451"/>
+      <entry name="q401" value="0x31303451"/>
     </enum>
 
     <request name="create_pool">
@@ -594,9 +598,9 @@
 	will be raised otherwise.
       </description>
       <arg name="dnd_actions" type="uint" summary="actions supported by the destination client"
-           enum="wl_data_device_manager.dnd_action"/>
+	   enum="wl_data_device_manager.dnd_action"/>
       <arg name="preferred_action" type="uint" summary="action preferred by the destination client"
-           enum="wl_data_device_manager.dnd_action"/>
+	   enum="wl_data_device_manager.dnd_action"/>
     </request>
 
     <event name="source_actions" since="3">
@@ -606,7 +610,7 @@
 	side changes its offered actions through wl_data_source.set_actions.
       </description>
       <arg name="source_actions" type="uint" summary="actions offered by the data source"
-           enum="wl_data_device_manager.dnd_action"/>
+	   enum="wl_data_device_manager.dnd_action"/>
     </event>
 
     <event name="action" since="3">
@@ -648,7 +652,7 @@
 	must happen before the call to wl_data_offer.finish.
       </description>
       <arg name="dnd_action" type="uint" summary="action selected by the compositor"
-           enum="wl_data_device_manager.dnd_action"/>
+	   enum="wl_data_device_manager.dnd_action"/>
     </event>
   </interface>
 
@@ -746,7 +750,7 @@
 	for drag-and-drop will raise a protocol error.
       </description>
       <arg name="dnd_actions" type="uint" summary="actions supported by the data source"
-           enum="wl_data_device_manager.dnd_action"/>
+	   enum="wl_data_device_manager.dnd_action"/>
     </request>
 
     <event name="dnd_drop_performed" since="3">
@@ -803,7 +807,7 @@
 	they reflect the current action.
       </description>
       <arg name="dnd_action" type="uint" summary="action selected by the compositor"
-           enum="wl_data_device_manager.dnd_action"/>
+	   enum="wl_data_device_manager.dnd_action"/>
     </event>
   </interface>
 
@@ -829,7 +833,8 @@
 	for the eventual data transfer. If source is NULL, enter, leave
 	and motion events are sent only to the client that initiated the
 	drag and the client is expected to handle the data passing
-	internally.
+	internally. If source is destroyed, the drag-and-drop session will be
+	cancelled.
 
 	The origin surface is the surface where the drag originates and
 	the client must have an active implicit grab that matches the
@@ -1378,6 +1383,7 @@
       </description>
       <entry name="invalid_scale" value="0" summary="buffer scale value is invalid"/>
       <entry name="invalid_transform" value="1" summary="buffer transform value is invalid"/>
+      <entry name="invalid_size" value="2" summary="buffer size is invalid"/>
     </enum>
 
     <request name="destroy" type="destructor">
@@ -1392,8 +1398,9 @@
 
 	The new size of the surface is calculated based on the buffer
 	size transformed by the inverse buffer_transform and the
-	inverse buffer_scale. This means that the supplied buffer
-	must be an integer multiple of the buffer_scale.
+	inverse buffer_scale. This means that at commit time the supplied
+	buffer size must be an integer multiple of the buffer_scale. If
+	that's not the case, an invalid_size error is sent.
 
 	The x and y arguments specify the location of the new pending
 	buffer's upper left corner, relative to the current buffer's upper
@@ -1606,6 +1613,12 @@
 	This is emitted whenever a surface's creation, movement, or resizing
 	results in it no longer having any part of it within the scanout region
 	of an output.
+
+	Clients should not use the number of outputs the surface is on for frame
+	throttling purposes. The surface might be hidden even if no leave event
+	has been sent, and the compositor might expect new surface content
+	updates even if no enter event has been sent. The frame event should be
+	used instead.
       </description>
       <arg name="output" type="object" interface="wl_output" summary="output left by the surface"/>
     </event>
@@ -1741,6 +1754,14 @@
       <entry name="touch" value="4" summary="the seat has touch devices"/>
     </enum>
 
+    <enum name="error">
+      <description summary="wl_seat error values">
+	These errors can be emitted in response to wl_seat requests.
+      </description>
+      <entry name="missing_capability" value="0"
+	     summary="get_pointer, get_keyboard or get_touch called on seat without the matching capability"/>
+    </enum>
+
     <event name="capabilities">
       <description summary="seat capabilities changed">
 	This is emitted whenever a seat gains or loses the pointer,
@@ -1779,7 +1800,8 @@
 	This request only takes effect if the seat has the pointer
 	capability, or has had the pointer capability in the past.
 	It is a protocol violation to issue this request on a seat that has
-	never had the pointer capability.
+	never had the pointer capability. The missing_capability error will
+	be sent in this case.
       </description>
       <arg name="id" type="new_id" interface="wl_pointer" summary="seat pointer"/>
     </request>
@@ -1792,7 +1814,8 @@
 	This request only takes effect if the seat has the keyboard
 	capability, or has had the keyboard capability in the past.
 	It is a protocol violation to issue this request on a seat that has
-	never had the keyboard capability.
+	never had the keyboard capability. The missing_capability error will
+	be sent in this case.
       </description>
       <arg name="id" type="new_id" interface="wl_keyboard" summary="seat keyboard"/>
     </request>
@@ -1805,7 +1828,8 @@
 	This request only takes effect if the seat has the touch
 	capability, or has had the touch capability in the past.
 	It is a protocol violation to issue this request on a seat that has
-	never had the touch capability.
+	never had the touch capability. The missing_capability error will
+	be sent in this case.
       </description>
       <arg name="id" type="new_id" interface="wl_touch" summary="seat touch interface"/>
     </request>
@@ -2189,6 +2213,9 @@
       <description summary="enter event">
 	Notification that this seat's keyboard focus is on a certain
 	surface.
+
+	The compositor must send the wl_keyboard.modifiers event after this
+	event.
       </description>
       <arg name="serial" type="uint" summary="serial number of the enter event"/>
       <arg name="surface" type="object" interface="wl_surface" summary="surface gaining keyboard focus"/>
@@ -2202,6 +2229,9 @@
 
 	The leave notification is sent before the enter notification
 	for the new focus.
+
+	After this event client must assume that all keys, including modifiers,
+	are lifted and also it must stop key repeating if there's some going on.
       </description>
       <arg name="serial" type="uint" summary="serial number of the leave event"/>
       <arg name="surface" type="object" interface="wl_surface" summary="surface that lost keyboard focus"/>
@@ -2220,6 +2250,12 @@
 	A key was pressed or released.
 	The time argument is a timestamp with millisecond
 	granularity, with an undefined base.
+
+	The key is a platform-specific key code that can be interpreted
+	by feeding it to the keyboard mapping (see the keymap event).
+
+	If this event produces a change in modifiers, then the resulting
+	wl_keyboard.modifiers event must be sent after this event.
       </description>
       <arg name="serial" type="uint" summary="serial number of the key event"/>
       <arg name="time" type="uint" summary="timestamp with millisecond granularity"/>
@@ -2515,6 +2551,10 @@
 	current.  In other words, the current mode is always the last
 	mode that was received with the current flag set.
 
+	Non-current modes are deprecated. A compositor can decide to only
+	advertise the current mode and never send other modes. Clients
+	should not rely on non-current modes.
+
 	The size of a mode is given in physical hardware units of
 	the output device. This is not necessarily the same as
 	the output size in the global compositor space. For instance,
@@ -2707,7 +2747,7 @@
       wl_surface state directly. A sub-surface is initially in the
       synchronized mode.
 
-      Sub-surfaces have also other kind of state, which is managed by
+      Sub-surfaces also have another kind of state, which is managed by
       wl_subsurface requests, as opposed to wl_surface requests. This
       state includes the sub-surface position relative to the parent
       surface (wl_subsurface.set_position), and the stacking order of
