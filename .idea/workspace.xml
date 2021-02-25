@@ -5,7 +5,7 @@
   </component>
   <component name="CMakeSettings">
     <configurations>
-      <configuration PROFILE_NAME="Debug" CONFIG_NAME="Debug" />
+      <configuration PROFILE_NAME="Debug" CONFIG_NAME="Debug" ENABLED="true" />
     </configurations>
   </component>
   <component name="CargoProjects">
@@ -14,7 +14,12 @@
   <component name="ChangeListManager">
     <list default="true" id="75313dea-8969-4f6c-90ed-eaac4f9d803d" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Cargo.lock" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build.rs" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wayland-sink-with-video-overlay_git.bb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/wayland.xml" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -45,10 +50,16 @@
     <property name="org.rust.cargo.project.model.PROJECT_DISCOVERY" value="true" />
   </component>
   <component name="RunManager">
+    <configuration default="true" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" PASS_PARENT_ENVS_2="true">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
     <configuration name="Run wayland_sink_with_video_overlay" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
       <option name="command" value="run wayland_sink_with_video_overlay" />
       <option name="workingDirectory" value="file://$PROJECT_DIR$" />
       <option name="channel" value="DEFAULT" />
+      <option name="requiredFeatures" value="true" />
       <option name="allFeatures" value="false" />
       <option name="emulateTerminal" value="false" />
       <option name="backtrace" value="SHORT" />
@@ -63,6 +74,7 @@
       <option name="command" value="run wayland_sink_with_video_overlay" />
       <option name="workingDirectory" value="file://$PROJECT_DIR$" />
       <option name="channel" value="DEFAULT" />
+      <option name="requiredFeatures" value="true" />
       <option name="allFeatures" value="false" />
       <option name="emulateTerminal" value="false" />
       <option name="backtrace" value="SHORT" />
@@ -73,14 +85,10 @@
         <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
       </method>
     </configuration>
-    <configuration default="true" type="GradleAppRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" PASS_PARENT_ENVS_2="true">
-      <method v="2">
-        <option name="com.jetbrains.cidr.cpp.gradle.execution.GradleNativeBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
-      </method>
-    </configuration>
   </component>
   <component name="RustProjectSettings">
     <option name="toolchainHomeDirectory" value="$USER_HOME$/.cargo/bin" />
+    <option name="version" value="2" />
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
@@ -96,51 +104,5 @@
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
-  </component>
-  <component name="WindowStateProjectService">
-    <state x="595" y="314" width="1086" height="740" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1611783661712">
-      <screen x="0" y="27" width="1920" height="1173" />
-    </state>
-    <state x="595" y="314" width="1086" height="740" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.27.1920.1173@0.27.1920.1173" timestamp="1611783661712" />
-    <state x="920" y="441" width="426" height="493" key="FileChooserDialogImpl" timestamp="1611783652119">
-      <screen x="0" y="27" width="1920" height="1173" />
-    </state>
-    <state x="920" y="441" width="426" height="493" key="FileChooserDialogImpl/0.27.1920.1173@0.27.1920.1173" timestamp="1611783652119" />
-    <state width="1658" height="340" key="GridCell.Tab.0.bottom" timestamp="1611861188061">
-      <screen x="0" y="27" width="1920" height="1173" />
-    </state>
-    <state width="1658" height="340" key="GridCell.Tab.0.bottom/0.27.1920.1173@0.27.1920.1173" timestamp="1611861188061" />
-    <state width="1658" height="340" key="GridCell.Tab.0.center" timestamp="1611861188060">
-      <screen x="0" y="27" width="1920" height="1173" />
-    </state>
-    <state width="1658" height="340" key="GridCell.Tab.0.center/0.27.1920.1173@0.27.1920.1173" timestamp="1611861188060" />
-    <state width="1658" height="340" key="GridCell.Tab.0.left" timestamp="1611861188060">
-      <screen x="0" y="27" width="1920" height="1173" />
-    </state>
-    <state width="1658" height="340" key="GridCell.Tab.0.left/0.27.1920.1173@0.27.1920.1173" timestamp="1611861188060" />
-    <state width="1658" height="340" key="GridCell.Tab.0.right" timestamp="1611861188061">
-      <screen x="0" y="27" width="1920" height="1173" />
-    </state>
-    <state width="1658" height="340" key="GridCell.Tab.0.right/0.27.1920.1173@0.27.1920.1173" timestamp="1611861188061" />
-    <state width="1658" height="340" key="GridCell.Tab.1.bottom" timestamp="1611861188061">
-      <screen x="0" y="27" width="1920" height="1173" />
-    </state>
-    <state width="1658" height="340" key="GridCell.Tab.1.bottom/0.27.1920.1173@0.27.1920.1173" timestamp="1611861188061" />
-    <state width="1658" height="340" key="GridCell.Tab.1.center" timestamp="1611861188061">
-      <screen x="0" y="27" width="1920" height="1173" />
-    </state>
-    <state width="1658" height="340" key="GridCell.Tab.1.center/0.27.1920.1173@0.27.1920.1173" timestamp="1611861188061" />
-    <state width="1658" height="340" key="GridCell.Tab.1.left" timestamp="1611861188061">
-      <screen x="0" y="27" width="1920" height="1173" />
-    </state>
-    <state width="1658" height="340" key="GridCell.Tab.1.left/0.27.1920.1173@0.27.1920.1173" timestamp="1611861188061" />
-    <state width="1658" height="340" key="GridCell.Tab.1.right" timestamp="1611861188061">
-      <screen x="0" y="27" width="1920" height="1173" />
-    </state>
-    <state width="1658" height="340" key="GridCell.Tab.1.right/0.27.1920.1173@0.27.1920.1173" timestamp="1611861188061" />
-    <state x="731" y="299" key="run.anything.popup" timestamp="1611851051640">
-      <screen x="0" y="27" width="1920" height="1173" />
-    </state>
-    <state x="731" y="299" key="run.anything.popup/0.27.1920.1173@0.27.1920.1173" timestamp="1611851051640" />
   </component>
 </project>

@@ -9,18 +9,13 @@ edition = "2018"
 
 [dependencies]
 wayland-client = { version = "0.28.3", features = ["use_system_lib"] }
-wayland-commons = "0.28.3"
-wayland-sys = "0.28.3"
-wayland-protocols = { features = ["client"] }
 gstreamer = "0.16.5"
 gstreamer-app = "0.16.5"
 gstreamer-video = "0.16.5"
 anyhow = "1.0"
 derive_more = "0.99.5"
 tempfile = ">=2.0, <4.0"
-
-[build-dependencies]
-wayland-scanner = "0.28.3"
+smithay-client-toolkit = ""
 
 [profile.release]
 lto = true

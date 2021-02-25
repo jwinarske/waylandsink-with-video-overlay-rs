@@ -1,20 +1,20 @@
 extern crate gstreamer as gst;
 extern crate gstreamer_app as gst_app;
 extern crate gstreamer_video as gst_video;
-extern crate wayland_sys;
+extern crate smithay_client_toolkit as sctk;
 
-use std::{cmp::min, io::Write, os::unix::io::AsRawFd};
+use std::cmp::min;
 use std::ffi::c_void;
-use std::process::exit;
+use std::io::{BufWriter, Seek, SeekFrom, Write};
 
 use anyhow::Error;
 use derive_more::{Display, Error};
 use gst::prelude::*;
 use gst_video::prelude::*;
-use wayland_client::{Display, event_enum, EventQueue, Filter, GlobalManager, Main,
-                     protocol::{wl_compositor, wl_keyboard, wl_pointer, wl_seat, wl_shm}};
-use wayland_client::protocol::wl_surface::WlSurface;
-use wayland_protocols::xdg_shell::client::{xdg_surface, xdg_toplevel, xdg_wm_base};
+use sctk::reexports::client::Display;
+use sctk::reexports::client::protocol::{wl_shm, wl_surface};
+use sctk::shm::MemPool;
+use sctk::window::{ButtonColorSpec, ColorSpec, ConceptConfig, ConceptFrame, Event as WEvent};
 
 #[derive(Debug, Display, Error)]
 #[display(fmt = "Missing element {}", _0)]
@@ -29,18 +29,13 @@ struct ErrorMessage {
     source: gst::glib::Error,
 }
 
-// declare an event enum containing the events we want to receive in the iterator
-event_enum!(
-    Events |
-    Pointer => wl_pointer::WlPointer,
-    Keyboard => wl_keyboard::WlKeyboard
-);
-
-const WIDTH: usize = 320;
-const HEIGHT: usize = 240;
+const WIDTH: usize = 640;
+const HEIGHT: usize = 480;
 const GST_WAYLAND_DISPLAY_HANDLE_CONTEXT_TYPE: &str = "GstWaylandDisplayHandleContextType";
 
-fn create_pipeline(surface: Main<WlSurface>, display: Display, event_queue: &mut EventQueue) -> Result<(gst::Pipeline, &mut EventQueue), Error> {
+sctk::default_environment!(ThemedFrameExample, desktop);
+
+fn create_pipeline(surface: &wl_surface::WlSurface, display: Display) -> Result<gst::Pipeline, Error> {
     gst::init()?;
 
     let pipeline = gst::Pipeline::new(None);
@@ -194,11 +189,55 @@ fn create_pipeline(surface: Main<WlSurface>, display: Display, event_queue: &mut
     }
     video_overlay.set_render_rectangle(0, 0, WIDTH as i32, HEIGHT as i32).unwrap();
 
-    Ok((pipeline, event_queue))
+    Ok(pipeline)
 }
 
-fn main_loop((pipeline, event_queue): (gst::Pipeline, &mut EventQueue)) -> Result<(), Error> {
-    pipeline.set_state(gst::State::Playing)?;
+fn main() {
+    let (env, display, mut queue) = sctk::new_default_environment!(ThemedFrameExample, desktop)
+        .expect("Unable to connect to a Wayland compositor");
+
+    let mut dimensions = (640u32, 480u32);
+
+    let surface = env.create_surface().detach();
+
+    let mut window = env
+        .create_window::<ConceptFrame, _>(
+            surface,
+            None,
+            dimensions,
+            move |evt, mut dispatch_data| {
+                let next_action = dispatch_data.get::<Option<WEvent>>().unwrap();
+                // Keep last event in priority order : Close > Configure > Refresh
+                let replace = match (&evt, &*next_action) {
+                    (_, &None)
+                    | (_, &Some(WEvent::Refresh))
+                    | (&WEvent::Configure { .. }, &Some(WEvent::Configure { .. }))
+                    | (&WEvent::Close, _) => true,
+                    _ => false,
+                };
+                if replace {
+                    *next_action = Some(evt);
+                }
+            },
+        )
+        .expect("Failed to create a window !");
+
+    window.set_title("Themed frame".to_string());
+    window.set_frame_config(create_frame_config());
+
+    let mut pools = env.create_double_pool(|_| {}).expect("Failed to create a memory pool !");
+
+    if !env.get_shell().unwrap().needs_configure() {
+        // initial draw to bootstrap on wl_shell
+        if let Some(pool) = pools.pool() {
+            redraw(pool, window.surface(), dimensions).expect("Failed to draw")
+        }
+        window.refresh();
+    }
+
+    let pipeline = create_pipeline(window.surface(), display).unwrap();
+
+    pipeline.set_state(gst::State::Playing).unwrap();
 
     let bus = pipeline
         .get_bus()
@@ -225,168 +264,116 @@ fn main_loop((pipeline, event_queue): (gst::Pipeline, &mut EventQueue)) -> Resul
     })
         .expect("Failed to add bus watch");
 
+    let mut next_action = None;
+
     loop {
-        event_queue.dispatch(&mut (), |_, _, _| { /* we ignore unfiltered messages */ }).unwrap();
+        match next_action.take() {
+            Some(WEvent::Close) => break,
+            Some(WEvent::Refresh) => {
+                window.refresh();
+                window.surface().commit();
+            }
+            Some(WEvent::Configure { new_size, states }) => {
+                if let Some((w, h)) = new_size {
+                    window.resize(w, h);
+                    dimensions = (w, h)
+                }
+                println!("Window states: {:?}", states);
+                window.refresh();
+                if let Some(pool) = pools.pool() {
+                    redraw(pool, window.surface(), dimensions).expect("Failed to draw")
+                }
+            }
+            None => {}
+        }
+
+        queue.dispatch(&mut next_action, |_, _, _| {}).unwrap();
     }
 }
 
-fn main() {
-    let display = Display::connect_to_env().unwrap();
-    let mut event_queue = display.create_event_queue();
-    let attached_display = (*display).clone().attach(event_queue.token());
-    let globals = GlobalManager::new(&attached_display);
+// The frame configuration we will use in this example
+fn create_frame_config() -> ConceptConfig {
+    let icon_spec = ButtonColorSpec {
+        hovered: ColorSpec::identical([0xFF, 0x22, 0x22, 0x22].into()),
+        idle: ColorSpec::identical([0xFF, 0xff, 0xff, 0xff].into()),
+        disabled: ColorSpec::invisible(),
+    };
 
-    // Make a synchronized roundtrip to the wayland server.
-    //
-    // When this returns it must be true that the server has already
-    // sent us all available globals.
-    event_queue.sync_roundtrip(&mut (), |_, _, _| unreachable!()).unwrap();
-
-    /*
-     * Create a buffer with window contents
-     */
-
-    // buffer (and window) width and height
-    let buf_x: u32 = 640;
-    let buf_y: u32 = 480;
-
-    // create a tempfile to write the contents of the window on
-    let mut tmp = tempfile::tempfile().expect("Unable to create a tempfile.");
-    // write the contents to it, lets put a nice color gradient
-    for i in 0..(buf_x * buf_y) {
-        let x = i % buf_x;
-        let y = i / buf_x;
-        let a = 0xFF;
-        let r = min(((buf_x - x) * 0xFF) / buf_x, ((buf_y - y) * 0xFF) / buf_y);
-        let g = min((x * 0xFF) / buf_x, ((buf_y - y) * 0xFF) / buf_y);
-        let b = min(((buf_x - x) * 0xFF) / buf_x, (y * 0xFF) / buf_y);
-        tmp.write_all(&((a << 24) + (r << 16) + (g << 8) + b).to_ne_bytes()).unwrap();
-    }
-    let _ = tmp.flush();
-
-    /*
-     * Init wayland objects
-     */
-
-    // The compositor allows us to creates surfaces
-    let compositor = globals.instantiate_exact::<wl_compositor::WlCompositor>(1).unwrap();
-    let surface = compositor.create_surface();
-
-    // The SHM allows us to share memory with the server, and create buffers
-    // on this shared memory to paint our surfaces
-    let shm = globals.instantiate_exact::<wl_shm::WlShm>(1).unwrap();
-    let pool = shm.create_pool(
-        tmp.as_raw_fd(),            // RawFd to the tempfile serving as shared memory
-        (buf_x * buf_y * 4) as i32, // size in bytes of the shared memory (4 bytes per pixel)
-    );
-    let buffer = pool.create_buffer(
-        0,                        // Start of the buffer in the pool
-        buf_x as i32,             // width of the buffer in pixels
-        buf_y as i32,             // height of the buffer in pixels
-        (buf_x * 4) as i32,       // number of bytes between the beginning of two consecutive lines
-        wl_shm::Format::Argb8888, // chosen encoding for the data
-    );
-
-    let xdg_wm_base = globals
-        .instantiate_exact::<xdg_wm_base::XdgWmBase>(1)
-        .expect("Compositor does not support xdg_shell");
-
-    xdg_wm_base.quick_assign(|xdg_wm_base, event, _| {
-        if let xdg_wm_base::Event::Ping { serial } = event {
-            xdg_wm_base.pong(serial);
-        };
-    });
-
-    let xdg_surface = xdg_wm_base.get_xdg_surface(&surface);
-    xdg_surface.quick_assign(move |xdg_surface, event, _| match event {
-        xdg_surface::Event::Configure { serial } => {
-            println!("xdg_surface (Configure)");
-            xdg_surface.ack_configure(serial);
-        }
-        _ => unreachable!(),
-    });
-
-    let xdg_toplevel = xdg_surface.get_toplevel();
-    xdg_toplevel.quick_assign(move |_, event, _| {
-        match event {
-            xdg_toplevel::Event::Close => {
-                exit(0);
-            }
-            xdg_toplevel::Event::Configure { width, height, states } => {
-                println!("xdg_toplevel (Configure) width: {}, height: {}, states: {:?}",
-                         width, height, states);
-            }
-            _ => unreachable!(),
-        }
-    });
-    xdg_toplevel.set_title("Simple Window".to_string());
-
-    // initialize a seat to retrieve pointer & keyboard events
-    //
-    // example of using a common filter to handle both pointer & keyboard events
-    let common_filter = Filter::new(move |event, _, _| match event {
-        Events::Pointer { event, .. } => match event {
-            wl_pointer::Event::Enter { surface_x, surface_y, .. } => {
-                println!("Pointer entered at ({}, {}).", surface_x, surface_y);
-            }
-            wl_pointer::Event::Leave { .. } => {
-                println!("Pointer left.");
-            }
-            wl_pointer::Event::Motion { surface_x, surface_y, .. } => {
-                println!("Pointer moved to ({}, {}).", surface_x, surface_y);
-            }
-            wl_pointer::Event::Button { button, state, .. } => {
-                println!("Button {} was {:?}.", button, state);
-            }
-            _ => {}
+    ConceptConfig {
+        // dark theme
+        primary_color: ColorSpec {
+            active: [0xFF, 0x22, 0x22, 0x22].into(),
+            inactive: [0xFF, 0x33, 0x33, 0x33].into(),
         },
-        Events::Keyboard { event, .. } => match event {
-            wl_keyboard::Event::Enter { .. } => {
-                println!("Gained keyboard focus.");
-            }
-            wl_keyboard::Event::Leave { .. } => {
-                println!("Lost keyboard focus.");
-            }
-            wl_keyboard::Event::Key { key, state, .. } => {
-                println!("Key with id {} was {:?}.", key, state);
-            }
-            _ => (),
-        },
-    });
-    // to be handled properly this should be more dynamic, as more
-    // than one seat can exist (and they can be created and destroyed
-    // dynamically), however most "traditional" setups have a single
-    // seat, so we'll keep it simple here
-    let mut pointer_created = false;
-    let mut keyboard_created = false;
-    globals.instantiate_exact::<wl_seat::WlSeat>(1).unwrap().quick_assign(move |seat, event, _| {
-        // The capabilities of a seat are known at runtime and we retrieve
-        // them via an events. 3 capabilities exists: pointer, keyboard, and touch
-        // we are only interested in pointer & keyboard here
-        use wayland_client::protocol::wl_seat::{Capability, Event as SeatEvent};
-
-        if let SeatEvent::Capabilities { capabilities } = event {
-            if !pointer_created && capabilities.contains(Capability::Pointer) {
-                // create the pointer only once
-                pointer_created = true;
-                seat.get_pointer().assign(common_filter.clone());
-            }
-            if !keyboard_created && capabilities.contains(Capability::Keyboard) {
-                // create the keyboard only once
-                keyboard_created = true;
-                seat.get_keyboard().assign(common_filter.clone());
-            }
-        }
-    });
-
-    event_queue.sync_roundtrip(&mut (), |_, _, _| { /* we ignore unfiltered messages */ }).unwrap();
-    surface.commit();
-
-    surface.attach(Some(&buffer), 0, 0);
-    surface.commit();
-
-    match create_pipeline(surface, display, &mut event_queue).and_then(main_loop) {
-        Ok(r) => r,
-        Err(e) => eprintln!("Error! {}", e),
+        // white separation line
+        secondary_color: ColorSpec::identical([0xFF, 0xFF, 0xFF, 0xFF].into()),
+        // red close button
+        close_button: Some((
+            // icon
+            icon_spec,
+            // button background
+            ButtonColorSpec {
+                hovered: ColorSpec::identical([0xFF, 0xFF, 0x00, 0x00].into()),
+                idle: ColorSpec::identical([0xFF, 0x88, 0x00, 0x00].into()),
+                disabled: ColorSpec::invisible(),
+            },
+        )),
+        // green maximize button
+        maximize_button: Some((
+            // icon
+            icon_spec,
+            // button background
+            ButtonColorSpec {
+                hovered: ColorSpec::identical([0xFF, 0x00, 0xFF, 0x00].into()),
+                idle: ColorSpec::identical([0xFF, 0x00, 0x88, 0x00].into()),
+                disabled: ColorSpec::invisible(),
+            },
+        )),
+        // blue minimize button
+        minimize_button: Some((
+            // icon
+            icon_spec,
+            // button background
+            ButtonColorSpec {
+                hovered: ColorSpec::identical([0xFF, 0x00, 0x00, 0xFF].into()),
+                idle: ColorSpec::identical([0xFF, 0x00, 0x00, 0x88].into()),
+                disabled: ColorSpec::invisible(),
+            },
+        )),
+        // same font as default
+        title_font: Some(("sans".into(), 17.0)),
+        // clear text over dark background
+        title_color: ColorSpec::identical([0xFF, 0xD0, 0xD0, 0xD0].into()),
     }
+}
+
+
+fn redraw(
+    pool: &mut MemPool,
+    surface: &wl_surface::WlSurface,
+    (buf_x, buf_y): (u32, u32),
+) -> Result<(), ::std::io::Error> {
+    // resize the pool if relevant
+    pool.resize((4 * buf_x * buf_y) as usize).expect("Failed to resize the memory pool.");
+    // write the contents, a nice color gradient =)
+    pool.seek(SeekFrom::Start(0))?;
+    {
+        let mut writer = BufWriter::new(&mut *pool);
+        for i in 0..(buf_x * buf_y) {
+            let x = (i % buf_x) as u32;
+            let y = (i / buf_x) as u32;
+            let r: u32 = min(((buf_x - x) * 0xFF) / buf_x, ((buf_y - y) * 0xFF) / buf_y);
+            let g: u32 = min((x * 0xFF) / buf_x, ((buf_y - y) * 0xFF) / buf_y);
+            let b: u32 = min(((buf_x - x) * 0xFF) / buf_x, (y * 0xFF) / buf_y);
+            let pixel: u32 = (0xFF << 24) + (r << 16) + (g << 8) + b;
+            writer.write_all(&pixel.to_ne_bytes())?;
+        }
+        writer.flush()?;
+    }
+    // get a buffer and attach it
+    let new_buffer =
+        pool.buffer(0, buf_x as i32, buf_y as i32, 4 * buf_x as i32, wl_shm::Format::Argb8888);
+    surface.attach(Some(&new_buffer), 0, 0);
+    surface.commit();
+    Ok(())
 }
