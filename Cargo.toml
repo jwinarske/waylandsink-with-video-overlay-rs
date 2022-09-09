@@ -1,7 +1,9 @@
 [package]
-name = "wayland_sink_with_video_overlay"
+name = "wayland-sink-with-video-overlay"
 version = "0.1.0"
 authors = ["Joel Winarske <joel.winarske@linux.com>"]
+repository = "https://github.com/jwinarske/waylandsink-with-video-overlay-rs"
+homepage = "https://github.com/jwinarske/waylandsink-with-video-overlay-rs"
 license = "MIT/Apache-2.0"
 edition = "2018"
 
@@ -15,4 +17,4 @@ gstreamer-video = "0.16.5"
 anyhow = "1.0"
 derive_more = "0.99.5"
 tempfile = ">=2.0, <4.0"
-smithay-client-toolkit = ""
+smithay-client-toolkit = "0.16.0"
